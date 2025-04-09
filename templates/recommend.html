@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' 
+      rel="stylesheet"/>
+      <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Fashion Recommendation</title>
+  </head>
+  <style>
+    body {
+        background-image: url("{{ url_for('static', filename='images/bg4.jpg') }}");
+        background-size: cover;
+        background-position: center;
+    }
+  </style>
+  <body>
+    <header class="header">
+      <nav class="navbar">
+        <div class="navdiv">
+        <div class="logo"><a href="{{ url_for('home') }}">Fashion Recommendation</div>
+        <ul class="nav__links">
+          <button class="btn"><a href="{{ url_for('logout') }}">Logout</a>
+          </button>
+          <div class="profile-dropdown">
+            <img src="{{ url_for('static', filename='images/profile.jpg') }}" alt="Profile" class="profile-icon">
+            <div class="dropdown-content">
+                <p>{{ session['username'] }}</p>
+            </div>
+        </div>
+        </ul>
+        </div>
+      </nav>
+      </header>
+      <div class="main">
+      <div class="box1">
+        <div class="text">
+        <h1>Fashion Recommendation</h1><br><hr><br>
+        <h2>Your Personalized Fashion Picks ✨<br><br> </h2>
+        <h2>💫Share your style, and we’ll recommend looks curated for you.</h2><br>
+        <p>Upload a photo or start your camera to receive outfit suggestions tailored to your look and vibe.</p><br>
+        <h3>Select how you want to share your current style with us.</h3><br>
+        </div>
+
+        <div id="inputsection">
+          <div class="dropdown-container">
+            
+            <h3>📸 Let’s get started ...</h3><br>
+            <button id="dropdown" onclick="toggleDropdown()" class="dropdown-btn">📩 Upload Photo</button>
+            
+            
+            <div id="dropdownMenu" class="dropdown-menu">
+            <input type="file" id="uploadImage" accept="image/*" onchange="previewImage(event)" hidden><br/>
+            <button data-action="upload">🖼️ Upload Image</button>
+            <button data-action="camera" id="capture" onclick="startCamera()">📷 Start Camera</button>
+            </div>
+        </div>
+      </div>
+
+
+        <div id="cameraContainer">         
+            <video id="camera" autoplay></video>
+            <button id='captureBtn' onclick="captureImage()">Capture</button>
+            <button id="retakeBtn" onclick="retakeImage()" style="display:none;">Retake</button>
+        </div>
+
+        <div class="preview">
+          <img id="imagePreview" src="" alt="">
+          <canvas id="canvas"></canvas>
+        </div>
+      </div>
+
+      <div class="box2">
+        <div class="recommendations">
+            <h1>Your Fashion Recommendations</h1><br><hr><br>
+            <p id="recommendationText">Upload an image or capture one to get outfit suggestions.</p>
+        </div>
+    </div>
+  </div>
+
+
+  <script>
+    const cameraContainer = document.getElementById("cameraContainer");
+    const video = document.getElementById("camera");
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
+    const inputsection = document.getElementById("inputsection");
+    const dropdown = document.getElementById("dropdown");
+    const uploadImage = document.getElementById("uploadImage");
+    const capture = document.getElementById("capture");
+    const captureBtn = document.getElementById("captureBtn");
+    const retakeBtn = document.getElementById("retakeBtn");
+
+    let hasCaptured = false;
+    let stream = null;
+  
+    function toggleDropdown() {
+      const menu = document.getElementById("dropdownMenu");
+      menu.style.display = (menu.style.display === "flex") ? "none" : "flex";
+    }
+    
+    // Handle dropdown option clicks
+    document.getElementById("dropdownMenu").addEventListener("click", function (event) {
+      const target = event.target;
+
+      if (target.tagName === "BUTTON") {
+        const action = target.dataset.action;
+
+        if (action === "camera") {
+          startCamera();
+          uploadImage.style.display="none";
+        } else if (action === "upload") {
+          document.getElementById("uploadImage").click();
+          capture.style.display="none";
+        } else {
+          console.log("Unknown action");
+        }
+
+        // Close dropdown in all cases
+        this.style.display = "none";
+      }
+    });
+
+
+    // Close dropdown if clicked outside
+    document.addEventListener("click", function(event) {
+      const dropdown = document.getElementById("dropdownMenu");
+      const btn = document.querySelector(".dropdown-btn");
+      if (!dropdown.contains(event.target) && !btn.contains(event.target)) {
+        dropdown.style.display = "none";
+      }
+    });
+    
+
+    // Start the camera
+    function startCamera() {
+  
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(mediaStream => {
+          stream = mediaStream;
+          video.srcObject = stream;
+          cameraContainer.style.display = "block";
+          video.style.display = "block";
+          captureBtn.style.display = "inline-block";
+          retakeBtn.style.display = "none";
+          hasCaptured = false;
+        })
+        .catch(error => {
+          alert("Camera access denied!");
+        });  
+        inputsection.style.display = "none";
+    }
+  
+    // Capture an image from the camera
+    function captureImage() {
+      if (hasCaptured) return;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+      // Show canvas, hide video and capture button
+      canvas.style.display = "block";
+      video.style.display = "none";
+      captureBtn.style.display = "none";
+      retakeBtn.style.display = "inline-block";
+      captureBtn.disabled = true; 
+      capture.style.display = "none";
+      inputsection.style.display = "none";
+
+      hasCaptured = true;
+  
+      document.getElementById("recommendationText").innerText = "Processing fashion recommendations...";
+      generateRecommendations();
+    }
+  
+    // Retake image
+    function retakeImage() {
+  
+      // Show video again and reset state
+      video.style.display = "block";
+      canvas.style.display = "none";
+      captureBtn.style.display = "inline-block";
+      captureBtn.disabled = false;
+      retakeBtn.style.display = "none";
+  
+      hasCaptured = false;
+    }
+  
+    // Preview uploaded image
+    function previewImage(event) {
+      const image = document.getElementById("imagePreview");
+      image.src = URL.createObjectURL(event.target.files[0]);
+      image.style.display = "block";
+  
+      document.getElementById("recommendationText").innerText = "Processing fashion recommendations...";
+      generateRecommendations();
+    }
+  
+    // Function to generate fashion recommendations (Placeholder)
+    function generateRecommendations() {
+      setTimeout(() => {
+        document.getElementById("recommendationText").innerText = "Based on your image, we recommend stylish outfits!";
+      }, 2000);
+    }
+  </script>
+  
+
+
+
+
+
+
+<!--
+
+
+    <script>  
+
+      // Start the camera
+      function startCamera() {
+        const cameraContainer = document.getElementById("cameraContainer");
+        const video = document.getElementById("camera");
+        
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                cameraContainer.style.display = "block";
+            })
+            .catch(error => {
+                alert("Camera access denied!");
+            });
+      }
+
+      // Capture an image from the camera
+      function captureImage() {
+        const video = document.getElementById("camera");
+        const canvas = document.getElementById("canvas");
+        const context = canvas.getContext("2d");
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.style.display = "block";
+        document.getElementById("recommendationText").innerText = "Processing fashion recommendations...";
+        generateRecommendations();
+      }
+
+      // Preview uploaded image
+      function previewImage(event) {
+        const image = document.getElementById("imagePreview");
+        image.src = URL.createObjectURL(event.target.files[0]);
+        image.style.display = "block";
+        document.getElementById("recommendationText").innerText = "Processing fashion recommendations...";
+        generateRecommendations();
+      }
+
+      // Function to generate fashion recommendations (Placeholder)
+      function generateRecommendations() {
+        setTimeout(() => {
+            document.getElementById("recommendationText").innerText = "Based on your image, we recommend stylish outfits !";
+        }, 2000);
+      }
+        */
+    </script>
+
+-->
+
+  </body>
+  </html>
