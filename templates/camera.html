@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Camera Capture</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    video { max-width: 100%; border: 2px solid #333; }
+  </style>
+</head>
+<body>
+  <div class="container mt-4">
+    <h1 class="text-center mb-4">Capture Your Outfit</h1>
+    <div class="d-flex justify-content-center mb-3">
+      <video id="video" autoplay></video>
+    </div>
+    <div class="d-flex justify-content-center">
+      <button id="captureBtn" class="btn btn-success">Capture Photo</button>
+    </div>
+    <form id="captureForm" action="{{ url_for('upload_image') }}" method="post" enctype="multipart/form-data" style="display:none;">
+      <input type="file" id="fileInput" name="file">
+    </form>
+  </div>
+  <script>
+    const video = document.getElementById('video');
+    const captureBtn = document.getElementById('captureBtn');
+    const fileInput = document.getElementById('fileInput');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => { video.srcObject = stream; })
+      .catch(err => { console.error('Error accessing webcam:', err); });
+
+    captureBtn.addEventListener('click', () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        const file = new File([blob], 'captured.jpg', { type: 'image/jpeg' });
+        const container = new DataTransfer();
+        container.items.add(file);
+        fileInput.files = container.files;
+        document.getElementById('captureForm').submit();
+      }, 'image/jpeg');
+    });
+  </script>
+</body>
+</html>
+
